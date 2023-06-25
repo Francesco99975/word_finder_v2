@@ -98,7 +98,7 @@ fn main() {
     let num_threads = num_cpus::get(); // Get the number of available threads
     // println!("Threads Num: {}", num_threads);
 
-    let style = ProgressStyle::default_bar().template("{msg} {bar:40} {pos}/{len}").unwrap();
+    let style = ProgressStyle::default_bar().template("{msg} {bar:40} {pos}/{len}").expect("Bar Style Error");
 
     let thread_pool = rayon::ThreadPoolBuilder::new()
         .num_threads(num_threads)
