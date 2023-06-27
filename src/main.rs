@@ -49,7 +49,7 @@ fn get_permutations(word: &str) -> Vec<String> {
         elapsed
     ));
 
-    return permutations;
+    permutations
 }
 
 fn load_dictionary() -> Vec<String> {
@@ -75,7 +75,7 @@ fn load_dictionary() -> Vec<String> {
         }
     }
 
-    return dictionary;
+    dictionary
 }
 
 fn main() {
