@@ -23,14 +23,15 @@ fn get_combinations(word: &str) -> Vec<String> {
 
 fn generate_combinations(chars: &[char], result: &mut Vec<String>, current: String, index: usize, rem_len: usize) {
     if rem_len == 0 {
-        result.push(current.clone());
         return;
     }
 
     for i in index..chars.len() {
         let mut next_combination = current.clone();
-
         next_combination.push(chars[i]);
+        if !result.contains(&next_combination) {
+            result.push(next_combination.clone());
+        }
         generate_combinations(chars, result, next_combination, i + 1, rem_len - 1);
     }
 }
@@ -70,9 +71,10 @@ fn get_permutations(word: &str) -> Vec<String> {
 
     let elapsed = now.elapsed();
     pb.finish_with_message(format!(
-        "{} {:.2?}",
+        "{} {:.2?} for {}",
         "Time Elapsed for permutations:".yellow().bold(),
-        elapsed
+        elapsed,
+        word
     ));
 
     permutations
@@ -135,7 +137,7 @@ fn main() {
     println!("Combinations:");
     println!("{:?}", combinations);
 
-    let mut permutations: Vec<String> = get_permutations(word);
+    let mut permutations: Vec<String> = Vec::new();
     
     for combination in combinations {
        permutations.extend(get_permutations(&combination));
@@ -143,40 +145,43 @@ fn main() {
 
     println!("Permutations len: {}", permutations.len());
 
-    let words: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    let shared_words: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    //let mut words: Vec<String> = Vec::new();
 
     let num_threads = num_cpus::get(); // Get the number of available threads
                                        // println!("Threads Num: {}", num_threads);
-    println!("{}", num_threads);
+    println!("Working with {} threads", num_threads);
 
     let style = ProgressStyle::default_bar()
         .template("{msg} {bar:40} {pos}/{len}")
         .expect("Bar Style Error");
 
-    let thread_pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(num_threads)
-        .build()
-        .expect("Cannot build Thread Pool");
+    //let thread_pool = rayon::ThreadPoolBuilder::new()
+      //  .num_threads(num_threads)
+        //.build()
+        //.expect("Cannot build Thread Pool");
 
-    thread_pool.install(|| {
-        dictionary
-            .par_iter()
+       dictionary
+         .par_iter()
             .progress_with_style(style)
             .for_each(|line| {
-                match words.lock() {
-                    Ok(&mut arr) => {
-                      if permutations.binary_search(line).is_ok() && !arr.contains(&line.to_string()) {
-                            arr.push(line.to_string());
-                      }
-                    },
-                    Err(_) => eprintln!("locked out"),
+                let mut arr = shared_words.lock().unwrap();
+                if permutations.contains(&line.to_string()) && !arr.contains(&line.to_string()) {
+                        arr.push(line.to_string());
                 }
             });
-    });
 
-    let words_vector = words.lock().unwrap();
-    println!("{} {}", "Total words found:".cyan(), words_vector.len());
-    for word in &*words_vector {
+    let mut words = shared_words.lock().unwrap();
+    /*
+    for line in dictionary.iter() {
+        if permutations.contains(&line.to_string()) && !words.contains(&line.to_string()) {
+            words.push(line.to_string())
+        }
+    }
+        */
+    words.sort();
+    println!("{} {}", "Total words found:".cyan(), words.len());
+    for word in words.iter() {
         println!("{}", word.cyan().italic().underline());
     }
 
