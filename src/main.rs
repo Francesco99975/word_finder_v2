@@ -37,28 +37,6 @@ fn generate_combinations(chars: &[char], result: &mut Vec<String>, current: Stri
 }
 
 fn get_permutations(word: &str) -> Vec<String> {
-    let now = Instant::now();
-
-    let pb = ProgressBar::new_spinner();
-    pb.enable_steady_tick(Duration::from_millis(120));
-    pb.set_style(
-        ProgressStyle::with_template("{spinner:.green} {msg}")
-            .unwrap()
-            .tick_strings(&[
-                "▹▹▹▹▹",
-                "▸▹▹▹▹",
-                "▹▸▹▹▹",
-                "▹▹▸▹▹",
-                "▹▹▹▸▹",
-                "▹▹▹▹▸",
-                "▪▪▪▪▪",
-            ]),
-    );
-    pb.set_message(format!(
-        "{}",
-        "Gathering all possible permutations...".green().italic()
-    ));
-
     let mut permutations: Vec<String> = Vec::new();
     let mut characters_list: Vec<char> = word.chars().collect();
 
@@ -68,14 +46,6 @@ fn get_permutations(word: &str) -> Vec<String> {
     }
 
     permutations.sort();
-
-    let elapsed = now.elapsed();
-    pb.finish_with_message(format!(
-        "{} {:.2?} for {}",
-        "Time Elapsed for permutations:".yellow().bold(),
-        elapsed,
-        word
-    ));
 
     permutations
 }
@@ -102,6 +72,8 @@ fn load_dictionary() -> Vec<String> {
             dictionary.push(word);
         }
     }
+
+    dictionary.sort();
 
     dictionary
 }
@@ -134,8 +106,6 @@ fn main() {
 
     let dictionary: Vec<String> = load_dictionary();
     let combinations: Vec<String> = get_combinations(word);
-    println!("Combinations:");
-    println!("{:?}", combinations);
 
     let mut permutations: Vec<String> = Vec::new();
     
@@ -143,42 +113,24 @@ fn main() {
        permutations.extend(get_permutations(&combination));
     }
 
-    println!("Permutations len: {}", permutations.len());
-
     let shared_words: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
-    //let mut words: Vec<String> = Vec::new();
-
-    let num_threads = num_cpus::get(); // Get the number of available threads
-                                       // println!("Threads Num: {}", num_threads);
-    println!("Working with {} threads", num_threads);
 
     let style = ProgressStyle::default_bar()
         .template("{msg} {bar:40} {pos}/{len}")
         .expect("Bar Style Error");
 
-    //let thread_pool = rayon::ThreadPoolBuilder::new()
-      //  .num_threads(num_threads)
-        //.build()
-        //.expect("Cannot build Thread Pool");
-
-       dictionary
-         .par_iter()
-            .progress_with_style(style)
-            .for_each(|line| {
-                let mut arr = shared_words.lock().unwrap();
-                if permutations.contains(&line.to_string()) && !arr.contains(&line.to_string()) {
-                        arr.push(line.to_string());
+    permutations
+        .par_iter()
+        .progress_with_style(style)
+        .for_each(|permutation| {
+            let mut arr = shared_words.lock().unwrap();
+                if dictionary.binary_search(permutation).is_ok() && !arr.contains(permutation) {
+                    arr.push(permutation.to_string());
                 }
-            });
+        });
 
     let mut words = shared_words.lock().unwrap();
-    /*
-    for line in dictionary.iter() {
-        if permutations.contains(&line.to_string()) && !words.contains(&line.to_string()) {
-            words.push(line.to_string())
-        }
-    }
-        */
+    
     words.sort();
     println!("{} {}", "Total words found:".cyan(), words.len());
     for word in words.iter() {
