@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::{self, BufRead, BufReader},
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::{Duration, Instant}
 };
 
 use colored::Colorize;
@@ -88,9 +88,11 @@ fn main() {
 
         match res {
             Ok(_) => {
-                if input_size > 0 && input_size < 11 {
+                if input_size > 2 && input_size < 11 {
                     break;
                 } else {
+                    input.clear();
+                    println!("{}"," << Please Enter a sequence of 3 to 10 characters >>".red());
                     continue;
                 }
             }
@@ -109,9 +111,31 @@ fn main() {
 
     let mut permutations: Vec<String> = Vec::new();
     
+    let prnow = Instant::now();
+    
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(Duration::from_millis(120));
+    pb.set_style(
+        ProgressStyle::with_template("{spinner:.blue} {msg}")
+            .unwrap()
+            .tick_strings(&[
+                "▹▹▹▹▹",
+                "▸▹▹▹▹",
+                "▹▸▹▹▹",
+                "▹▹▸▹▹",
+                "▹▹▹▸▹",
+                "▹▹▹▹▸",
+                "▪▪▪▪▪",
+            ]),
+    );
+    pb.set_message(format!("{}", "Generating Permutations...".blue().italic()));
+
     for combination in combinations {
        permutations.extend(get_permutations(&combination));
     }
+
+    let prelapsed = prnow.elapsed();
+    pb.finish_with_message(format!("{} {:.2?}", "Time Elapsed to gather permutations:".yellow().bold(), prelapsed));
 
     let shared_words: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -132,12 +156,14 @@ fn main() {
     let mut words = shared_words.lock().unwrap();
     
     words.sort();
-    println!("{} {}", "Total words found:".cyan(), words.len());
     for word in words.iter() {
-        println!("{}", word.cyan().italic().underline());
+        if word.len() > 2 {
+            println!("{}", word.cyan().italic().underline());
+        }
     }
 
-    // //Benchmark END
+    println!("{} {}", "Total words found:".cyan(), words.len());
+    //Benchmark END
     let elapsed = now.elapsed();
     println!("{} {:.2?}", "Time Elapsed:".yellow().bold(), elapsed);
 }
