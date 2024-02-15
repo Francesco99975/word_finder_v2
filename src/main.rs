@@ -84,11 +84,12 @@ fn main() {
     loop {
         println!("{}", "Enter a word (MAX 10 letters): ".green());
         let res = io::stdin().read_line(&mut input);
-        let input_size = input.trim().to_lowercase().len();
+        input = input.trim().to_lowercase();
+        let input_size = input.len();
 
         match res {
             Ok(_) => {
-                if input_size > 2 && input_size < 11 {
+                if input.chars().all(|c| c.is_alphabetic()) && input_size > 2 && input_size < 11 {
                     break;
                 } else {
                     input.clear();
@@ -100,14 +101,15 @@ fn main() {
         }
     }
 
-    let binding = input.trim().to_lowercase();
-    let word = binding.as_str();
 
     //Benchmark START
     let now = Instant::now();
 
+    let binding = input.trim().to_lowercase();
+    let sequence = binding.as_str();
+
     let dictionary: Vec<String> = load_dictionary();
-    let combinations: Vec<String> = get_combinations(word);
+    let combinations: Vec<String> = get_combinations(sequence);
 
     let mut permutations: Vec<String> = Vec::new();
     //let shared_permutations: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
