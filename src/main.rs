@@ -170,13 +170,19 @@ fn main() {
     let mut words = shared_words.lock().unwrap();
     
     words.sort();
+    let mut pc = 1;
     for word in words.iter() {
         if word.len() > 2 {
-            println!("{}", word.cyan().italic().underline());
+            if pc % (words.len() / (words.len() / 10)) == 0 {
+                println!("{}", word.cyan().italic().underline());
+            } else {
+                print!("{}\t", word.cyan().italic().underline());
+            }
+            pc += 1;
         }
     }
 
-    println!("{} {}", "Total words found:".cyan(), words.len());
+    println!("\n{} {}", "Total words found:".cyan(), words.len());
     //Benchmark END
     let elapsed = now.elapsed();
     println!("{} {:.2?}", "Time Elapsed:".yellow().bold(), elapsed);
