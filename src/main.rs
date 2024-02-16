@@ -53,7 +53,7 @@ fn get_permutations(word: &str) -> Vec<String> {
 fn load_dictionary() -> Vec<String> {
     let mut dictionary: Vec<String> = Vec::new();
 
-    let open_dict = File::open("words.txt");
+    let open_dict = File::open("it.dic");
 
     let dictionary_file = match open_dict {
         Ok(dict) => dict,
@@ -82,7 +82,7 @@ fn main() {
     let mut input = String::new();
 
     loop {
-        println!("{}", "Enter a word (MAX 10 letters): ".green());
+        println!("{}", "Enter a sequence of letters (MAX 10 letters): ".green());
         let res = io::stdin().read_line(&mut input);
         input = input.trim().to_lowercase();
         let input_size = input.len();
@@ -108,7 +108,8 @@ fn main() {
     let binding = input.trim().to_lowercase();
     let sequence = binding.as_str();
 
-    let dictionary: Vec<String> = load_dictionary();
+    let shared_dictionary: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(load_dictionary()));
+    //let dictionary: Vec<String> = load_dictionary();
     let combinations: Vec<String> = get_combinations(sequence);
 
     let mut permutations: Vec<String> = Vec::new();
@@ -164,6 +165,7 @@ fn main() {
         .progress_with_style(style)
         .for_each(|permutation| {
             let mut arr = shared_words.lock().unwrap();
+            let dictionary = shared_dictionary.lock().unwrap();
                 if dictionary.binary_search(permutation).is_ok() && !arr.contains(permutation) {
                     arr.push(permutation.to_string());
                 }
