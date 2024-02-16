@@ -1,8 +1,9 @@
 use std::{
     fs::File,
     io::{self, BufRead, BufReader},
-    sync::{Arc, Mutex},
-    time::{Duration, Instant}
+    sync::{Arc, Mutex, mpsc::channel},
+    time::{Duration, Instant},
+    thread
 };
 
 use colored::Colorize;
@@ -114,64 +115,39 @@ fn main() {
 
     let mut permutations: Vec<String> = Vec::new();
     //let shared_permutations: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
-    
-    let prnow = Instant::now();
-    
-    let pb = ProgressBar::new_spinner();
-    pb.enable_steady_tick(Duration::from_millis(120));
-    pb.set_style(
-        ProgressStyle::with_template("{spinner:.blue} {msg}")
-            .unwrap()
-            .tick_strings(&[
-                "▹▹▹▹▹",
-                "▸▹▹▹▹",
-                "▹▸▹▹▹",
-                "▹▹▸▹▹",
-                "▹▹▹▸▹",
-                "▹▹▹▹▸",
-                "▪▪▪▪▪",
-            ]),
-    );
-    pb.set_message(format!("{}", "Generating Permutations...".blue().italic()));
 
     for combination in combinations {
-       permutations.extend(get_permutations(&combination));
+        permutations.extend(get_permutations(&combination));
     }
 
-/*
-    let stylep = ProgressStyle::default_bar()
-        .template("{msg} {bar:40} {pos}/{len}")
-        .expect("Bar Style Error");
+    let (tx, rx) = channel();
+    let mut words: Vec<String> = Vec::new();
+    
+    let chunks = permutations.chunks(8);
 
-    combinations.par_iter().progress_with_style(stylep).for_each(|combination| {
-        let mut permutations = shared_permutations.lock().unwrap();
-        permutations.extend(get_permutations(&combination));
-    });
-*/
-    let prelapsed = prnow.elapsed();
-    pb.finish_with_message(format!("{} {:.2?}", "Time Elapsed to gather permutations:".yellow().bold(), prelapsed));
-
-    let shared_words: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
-
-
-    let style = ProgressStyle::default_bar()
-        .template("{msg} {bar:40} {pos}/{len}")
-        .expect("Bar Style Error");
-
-  //  let permutations = shared_permutations.lock().unwrap();
-
-    permutations
-        .par_iter()
-        .progress_with_style(style)
-        .for_each(|permutation| {
-            let mut arr = shared_words.lock().unwrap();
+    let mut handles = Vec::new();
+    for chunk in chunks {
+        let shared_dictionary = Arc::clone(&shared_dictionary);
+        let handle = thread::spawn(move || {
             let dictionary = shared_dictionary.lock().unwrap();
-                if dictionary.binary_search(permutation).is_ok() && !arr.contains(permutation) {
-                    arr.push(permutation.to_string());
+            for permutation in chunk {
+                if dictionary.binary_search(permutation).is_ok()  {
+                    tx.send(permutation.to_string()).unwrap();
                 }
+            }
         });
 
-    let mut words = shared_words.lock().unwrap();
+        handles.push(handle);
+    }
+
+    match rx.recv() {
+        Ok(permutation) => words.push(permutation),
+        Err(_) => eprintln!("Error on receive"),
+    };
+
+    for handle in handles {
+        handle.join();
+    }
     
     words.sort();
     let mut pc = 1;
