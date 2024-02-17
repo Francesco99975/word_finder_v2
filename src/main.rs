@@ -123,15 +123,16 @@ fn main() {
     let (tx, rx) = channel();
     let mut words: Vec<String> = Vec::new();
     
-    let chunks = permutations.chunks(8);
+    let chunks: Vec<Vec<String>> = permutations.chunks(8).map(|s| s.into()).collect();
 
     let mut handles = Vec::new();
     for chunk in chunks {
         let shared_dictionary = Arc::clone(&shared_dictionary);
+        let tx = tx.clone();
         let handle = thread::spawn(move || {
             let dictionary = shared_dictionary.lock().unwrap();
             for permutation in chunk {
-                if dictionary.binary_search(permutation).is_ok()  {
+                if dictionary.binary_search(&permutation).is_ok()  {
                     tx.send(permutation.to_string()).unwrap();
                 }
             }
@@ -140,13 +141,14 @@ fn main() {
         handles.push(handle);
     }
 
-    match rx.recv() {
-        Ok(permutation) => words.push(permutation),
-        Err(_) => eprintln!("Error on receive"),
-    };
+    drop(tx);
+
+    for permutation in rx {
+        words.push(permutation);
+    }
 
     for handle in handles {
-        handle.join();
+        let _ = handle.join();
     }
     
     words.sort();
