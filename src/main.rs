@@ -18,6 +18,8 @@ fn get_combinations(word: &str) -> Vec<String> {
         generate_combinations(&chars, &mut combinations, String::new(), 0, length);
     }
 
+    combinations.sort();
+
     combinations
 }
 
